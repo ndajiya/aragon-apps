@@ -1,26 +1,28 @@
-function assertError(error, s, message) {
-  assert.isAbove(error.message.search(s), -1, `${message}\n\t(error: ${error})`);
+function assertError(error, expectedErrorCode, expectedErrorMessage = '') {
+  assert(error.message.search(expectedErrorCode) > -1, `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`)
+  assert(error.message.search(expectedErrorMessage) > -1, `Expected error message "${expectedErrorMessage}" but failed with "${error}" instead.`)
 }
 
-async function assertThrows(block, message, errorCode) {
+async function assertThrows(blockOrPromise, expectedErrorCode, expectedErrorMessage = '') {
   try {
-    await block()
-  } catch (e) {
-    return assertError(e, errorCode, message)
+    (typeof blockOrPromise === 'function') ? await blockOrPromise() : await blockOrPromise
+  } catch (error) {
+    assertError(error, expectedErrorCode, expectedErrorMessage)
+    return
   }
-  assert.fail('should have thrown before')
+  assert.fail(`Expected "${expectedErrorCode}" but it did not fail`)
 }
 
 module.exports = {
-  async assertJump(block, message = 'should have failed with invalid JUMP') {
-    return assertThrows(block, message, 'invalid JUMP')
+  async assertJump(blockOrPromise, message = '') {
+    return assertThrows(blockOrPromise, 'invalid JUMP', message)
   },
 
-  async assertInvalidOpcode(block, message = 'should have failed with invalid opcode') {
-    return assertThrows(block, message, 'invalid opcode')
+  async assertInvalidOpcode(blockOrPromise, message = '') {
+    return assertThrows(blockOrPromise, 'invalid opcode', message)
   },
 
-  async assertRevert(block, message = 'should have failed by reverting') {
-    return assertThrows(block, message, 'revert')
+  async assertRevert(blockOrPromise, message = '') {
+    return assertThrows(blockOrPromise, 'revert', message)
   },
 }
