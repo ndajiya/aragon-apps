@@ -1,28 +1,37 @@
-function assertError(error, expectedErrorCode, expectedErrorMessage = '') {
+const THROW_ERROR_PREFIX = 'VM Exception while processing transaction:'
+
+function assertError(error, expectedErrorCode) {
   assert(error.message.search(expectedErrorCode) > -1, `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`)
-  assert(error.message.search(expectedErrorMessage) > -1, `Expected error message "${expectedErrorMessage}" but failed with "${error}" instead.`)
 }
 
-async function assertThrows(blockOrPromise, expectedErrorCode, expectedErrorMessage = '') {
+async function assertThrows(blockOrPromise, expectedErrorCode) {
   try {
     (typeof blockOrPromise === 'function') ? await blockOrPromise() : await blockOrPromise
   } catch (error) {
-    assertError(error, expectedErrorCode, expectedErrorMessage)
-    return
+    assertError(error, expectedErrorCode)
+    return error
   }
   assert.fail(`Expected "${expectedErrorCode}" but it did not fail`)
 }
 
 module.exports = {
-  async assertJump(blockOrPromise, message = '') {
-    return assertThrows(blockOrPromise, 'invalid JUMP', message)
+  async assertJump(blockOrPromise) {
+    return assertThrows(blockOrPromise, 'invalid JUMP')
   },
 
-  async assertInvalidOpcode(blockOrPromise, message = '') {
-    return assertThrows(blockOrPromise, 'invalid opcode', message)
+  async assertInvalidOpcode(blockOrPromise) {
+    return assertThrows(blockOrPromise, 'invalid opcode')
   },
 
-  async assertRevert(blockOrPromise, message = '') {
-    return assertThrows(blockOrPromise, 'revert', message)
+  async assertRevert(blockOrPromise, reason) {
+    const error = await assertThrows(blockOrPromise, 'revert')
+    const errorPrefix = `${THROW_ERROR_PREFIX} revert`
+    if (error.message.includes(errorPrefix)) {
+      error.reason = error.message.replace(errorPrefix, '').trim()
+    }
+
+    if (reason) {
+      assert.equal(reason, error.reason, `Expected revert reason "${reason}" but failed with "${error.reason || 'no reason'}" instead.`)
+    }
   },
 }
