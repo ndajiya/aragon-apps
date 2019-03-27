@@ -4,14 +4,15 @@ function assertError(error, expectedErrorCode) {
   assert(error.message.search(expectedErrorCode) > -1, `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`)
 }
 
-async function assertThrows(blockOrPromise, expectedErrorCode) {
+async function assertThrows(blockOrPromise, expectedErrorCode, expectedReason) {
   try {
     (typeof blockOrPromise === 'function') ? await blockOrPromise() : await blockOrPromise
   } catch (error) {
     assertError(error, expectedErrorCode)
     return error
   }
-  assert.fail(`Expected "${expectedErrorCode}" but it did not fail`)
+  // assert.fail() for some reason does not have its error string printed 🤷
+  assert(0, `Expected "${expectedErrorCode}"${expectedReason ? ` (with reason: "${expectedReason}")` : ''} but it did not fail`)
 }
 
 module.exports = {
@@ -24,7 +25,7 @@ module.exports = {
   },
 
   async assertRevert(blockOrPromise, reason) {
-    const error = await assertThrows(blockOrPromise, 'revert')
+    const error = await assertThrows(blockOrPromise, 'revert', reason)
     const errorPrefix = `${THROW_ERROR_PREFIX} revert`
     if (error.message.includes(errorPrefix)) {
       error.reason = error.message.replace(errorPrefix, '').trim()
